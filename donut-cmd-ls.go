@@ -18,9 +18,11 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"net/url"
 
+	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/donut/client"
 	"github.com/minio-io/donut/client/donut"
@@ -36,6 +38,22 @@ func printBuckets(v []*client.Bucket) {
 		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Time.Local().Format(printDate), "", b.Name)
 		info(msg)
 	}
+}
+
+// printObjects prints a meta-data of a list of objects
+func printObjects(v []*client.Item) {
+	if len(v) > 0 {
+		// Items are already sorted
+		for _, b := range v {
+			printObject(b.LastModified.Time, b.Size, b.Key)
+		}
+	}
+}
+
+// printObject prints object meta-data
+func printObject(date time.Time, v int64, key string) {
+	msg := fmt.Sprintf("%23s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
+	info(msg)
 }
 
 // doDonutListCmd - list buckets and objects
@@ -63,9 +81,23 @@ func doDonutListCmd(c *cli.Context) {
 	if err != nil {
 		fatal(err.Error())
 	}
-	buckets, err := d.ListBuckets()
+	bucketName, objectName, err := url2Object(urlArg1.String())
 	if err != nil {
 		fatal(err.Error())
 	}
-	printBuckets(buckets)
+
+	switch true {
+	case bucketName == "":
+		buckets, err := d.ListBuckets()
+		if err != nil {
+			fatal(err.Error())
+		}
+		printBuckets(buckets)
+	case objectName == "": // List objects in a bucket
+		items, _, err := d.ListObjects(bucketName, "", "", "", client.Maxkeys)
+		if err != nil {
+			fatal(err.Error())
+		}
+		printObjects(items)
+	}
 }
