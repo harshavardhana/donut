@@ -70,8 +70,14 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 	return b.objects, nil
 }
 
-func (b bucket) decodeData(curBlockSize int, readers []io.ReadCloser, encoder Encoder, writer *io.PipeWriter) ([]byte, error) {
-	curChunkSize, err := encoder.GetEncodedBlockLen(curBlockSize)
+func (b bucket) decodeData(totalLeft, blockSize int64, readers []io.ReadCloser, encoder Encoder, writer *io.PipeWriter) ([]byte, error) {
+	var curBlockSize int64
+	if blockSize < totalLeft {
+		curBlockSize = blockSize
+	} else {
+		curBlockSize = totalLeft // cast is safe, blockSize in if protects
+	}
+	curChunkSize, err := encoder.GetEncodedBlockLen(int(curBlockSize))
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +90,20 @@ func (b bucket) decodeData(curBlockSize int, readers []io.ReadCloser, encoder En
 		}
 		encodedBytes[i] = bytesBuffer.Bytes()
 	}
-	decodedData, err := encoder.Decode(encodedBytes, curBlockSize)
+	decodedData, err := encoder.Decode(encodedBytes, int(curBlockSize))
 	if err != nil {
 		return nil, err
 	}
 	return decodedData, nil
+}
+
+func (b bucket) map2Ints(donutObjectMetadata map[string]string) (totalChunks int, totalLeft, blockSize int64, k, m uint64, err error) {
+	totalChunks, err = strconv.Atoi(donutObjectMetadata["chunkCount"])
+	totalLeft, err = strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
+	blockSize, err = strconv.ParseInt(donutObjectMetadata["blockSize"], 10, 64)
+	k, err = strconv.ParseUint(donutObjectMetadata["erasureK"], 10, 8)
+	m, err = strconv.ParseUint(donutObjectMetadata["erasureM"], 10, 8)
+	return
 }
 
 func (b bucket) GetObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
@@ -96,32 +111,12 @@ func (b bucket) GetObject(objectName string, writer *io.PipeWriter, donutObjectM
 		writer.CloseWithError(errors.New("invalid argument"))
 		return
 	}
-	totalChunks, err := strconv.Atoi(donutObjectMetadata["chunkCount"])
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-	totalLeft, err := strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-	blockSize, err := strconv.Atoi(donutObjectMetadata["blockSize"])
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-	k, err := strconv.ParseUint(donutObjectMetadata["erasureK"], 10, 8)
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
-	m, err := strconv.ParseUint(donutObjectMetadata["erasureM"], 10, 8)
-	if err != nil {
-		writer.CloseWithError(err)
-		return
-	}
 	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	totalChunks, totalLeft, blockSize, k, m, err := b.map2Ints(donutObjectMetadata)
 	if err != nil {
 		writer.CloseWithError(err)
 		return
@@ -144,13 +139,7 @@ func (b bucket) GetObject(objectName string, writer *io.PipeWriter, donutObjectM
 		return
 	}
 	for i := 0; i < totalChunks; i++ {
-		curBlockSize := 0
-		if int64(blockSize) < totalLeft {
-			curBlockSize = blockSize
-		} else {
-			curBlockSize = int(totalLeft) // cast is safe, blockSize in if protects
-		}
-		decodedData, err := b.decodeData(curBlockSize, readers, encoder, writer)
+		decodedData, err := b.decodeData(totalLeft, blockSize, readers, encoder, writer)
 		if err != nil {
 			writer.CloseWithError(err)
 			return
