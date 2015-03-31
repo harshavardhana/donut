@@ -70,13 +70,127 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 	return b.objects, nil
 }
 
-func (b bucket) GetObject(object string) (io.ReadCloser, error) {
-	var err error
-	b.objects[object], err = NewObject(object, "")
+func (b bucket) decodeData(curBlockSize int, readers []io.ReadCloser, encoder Encoder, writer *io.PipeWriter) ([]byte, error) {
+	curChunkSize, err := encoder.GetEncodedBlockLen(curBlockSize)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	encodedBytes := make([][]byte, 16)
+	for i, reader := range readers {
+		var bytesBuffer bytes.Buffer
+		_, err := io.CopyN(&bytesBuffer, reader, int64(curChunkSize))
+		if err != nil {
+			return nil, err
+		}
+		encodedBytes[i] = bytesBuffer.Bytes()
+	}
+	decodedData, err := encoder.Decode(encodedBytes, curBlockSize)
+	if err != nil {
+		return nil, err
+	}
+	return decodedData, nil
+}
+
+func (b bucket) GetObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
+	if objectName == "" || writer == nil || len(donutObjectMetadata) == 0 {
+		writer.CloseWithError(errors.New("invalid argument"))
+		return
+	}
+	totalChunks, err := strconv.Atoi(donutObjectMetadata["chunkCount"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	totalLeft, err := strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	blockSize, err := strconv.Atoi(donutObjectMetadata["blockSize"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	k, err := strconv.ParseUint(donutObjectMetadata["erasureK"], 10, 8)
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	m, err := strconv.ParseUint(donutObjectMetadata["erasureM"], 10, 8)
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	technique, ok := donutObjectMetadata["erasureTechnique"]
+	if !ok {
+		writer.CloseWithError(errors.New("missing erasure Technique"))
+		return
+	}
+	hasher := md5.New()
+	mwriter := io.MultiWriter(writer, hasher)
+	encoder, err := NewEncoder(uint8(k), uint8(m), technique)
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	readers, err := b.getDiskReaders(objectName, "data")
+	if err != nil {
+		writer.CloseWithError(err)
+		return
+	}
+	for i := 0; i < totalChunks; i++ {
+		curBlockSize := 0
+		if int64(blockSize) < totalLeft {
+			curBlockSize = blockSize
+		} else {
+			curBlockSize = int(totalLeft) // cast is safe, blockSize in if protects
+		}
+		decodedData, err := b.decodeData(curBlockSize, readers, encoder, writer)
+		if err != nil {
+			writer.CloseWithError(err)
+			return
+		}
+		_, err = io.Copy(mwriter, bytes.NewBuffer(decodedData))
+		if err != nil {
+			writer.CloseWithError(err)
+			return
+		}
+		totalLeft = totalLeft - int64(blockSize)
+	}
+	actualMd5sum := hasher.Sum(nil)
+	if bytes.Compare(expectedMd5sum, actualMd5sum) != 0 {
+		writer.CloseWithError(errors.New("checksum mismatch"))
+		return
+	}
+	writer.Close()
+	return
+}
+
+func (b bucket) getDiskReaders(objectName, objectMeta string) ([]io.ReadCloser, error) {
+	readers := make([]io.ReadCloser, 16)
+	nodeSlice := 0
+	for _, node := range b.nodes {
+		disks, err := node.ListDisks()
+		if err != nil {
+			return nil, err
+		}
+		for _, disk := range disks {
+			bucketSlice := fmt.Sprintf("%s$%d$%d", b.name, nodeSlice, disk.GetOrder())
+			objectPath := path.Join(b.donutName, bucketSlice, objectName, objectMeta)
+			objectSlice, err := disk.OpenFile(objectPath)
+			if err != nil {
+				return nil, err
+			}
+			readers[disk.GetOrder()] = objectSlice
+		}
+		nodeSlice = nodeSlice + 1
+	}
+	return readers, nil
 }
 
 func (b bucket) SetObjectMetadata(objectName string, objectMetadata map[string]string) error {
@@ -142,6 +256,12 @@ func (b bucket) getDiskWriters(objectName, objectMeta string) ([]io.WriteCloser,
 }
 
 func (b bucket) PutObject(objectName string, contents io.ReadCloser) error {
+	if objectName == "" {
+		return errors.New("invalid argument")
+	}
+	if contents == nil {
+		return errors.New("invalid argument")
+	}
 	writers, err := b.getDiskWriters(objectName, "data")
 	if err != nil {
 		return err

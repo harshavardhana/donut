@@ -73,7 +73,7 @@ func download(urlArg1, urlArg2 *url.URL) {
 		if err != nil {
 			fatal(err.Error())
 		}
-		bucketName, objectName, err := url2Object(urlArg2.String())
+		bucketName, objectName, err := url2Object(urlArg1.String())
 		if err != nil {
 			fatal(err.Error())
 		}
