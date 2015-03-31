@@ -81,6 +81,13 @@ var lsDonutCmd = cli.Command{
 	Action:      doDonutListCmd,
 }
 
+var cpDonutCmd = cli.Command{
+	Name:        "cp",
+	Usage:       "",
+	Description: "",
+	Action:      doDonutCPCmd,
+}
+
 var donutOptions = []cli.Command{
 	makeDonutCmd,
 	attachDiskCmd,
@@ -89,6 +96,7 @@ var donutOptions = []cli.Command{
 	rebalanceDonutCmd,
 	mbDonutCmd,
 	lsDonutCmd,
+	cpDonutCmd,
 }
 
 func doHealDonutCmd(c *cli.Context) {

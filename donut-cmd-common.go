@@ -16,6 +16,34 @@
 
 package main
 
+import (
+	"strings"
+
+	"net/url"
+)
+
+// url2Object converts URL to bucket and objectname
+func url2Object(urlStr string) (bucketName, objectName string, err error) {
+	u, err := url.Parse(urlStr)
+	if u.Path == "" {
+		// No bucket name passed. It is a valid case
+		return "", "", nil
+	}
+	splits := strings.SplitN(u.Path, "/", 3)
+	switch len(splits) {
+	case 0, 1:
+		bucketName = ""
+		objectName = ""
+	case 2:
+		bucketName = splits[1]
+		objectName = ""
+	case 3:
+		bucketName = splits[1]
+		objectName = splits[2]
+	}
+	return bucketName, objectName, nil
+}
+
 func isStringInSlice(items []string, item string) bool {
 	for _, s := range items {
 		if s == item {
