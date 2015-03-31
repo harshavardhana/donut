@@ -164,11 +164,11 @@ func (b bucket) WriteDonutObjectMetadata(objectName string, donutObjectMetadata 
 	return nil
 }
 
-func (b bucket) PutObject(objectName string, contents io.ReadCloser) error {
+func (b bucket) PutObject(objectName string, objectData io.Reader) error {
 	if objectName == "" {
 		return errors.New("invalid argument")
 	}
-	if contents == nil {
+	if objectData == nil {
 		return errors.New("invalid argument")
 	}
 	writers, err := b.getDiskWriters(objectName, "data")
@@ -179,7 +179,7 @@ func (b bucket) PutObject(objectName string, contents io.ReadCloser) error {
 		defer writer.Close()
 	}
 
-	chunks := split.Stream(contents, 10*1024*1024)
+	chunks := split.Stream(objectData, 10*1024*1024)
 	encoder, err := NewEncoder(8, 8, "Cauchy")
 	if err != nil {
 		return err

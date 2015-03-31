@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CONST_FILE=build-constants.go
+CONST_FILE=${PWD}/cmd/donut-cli/build-constants.go
 
 cat > $CONST_FILE <<EOF
 /*
@@ -16,4 +16,3 @@ EOF
 
 commit_id=$(git log --format="%H" -n 1)
 sed -i "s/__GIT_COMMIT_HASH__/$commit_id/" $CONST_FILE
-

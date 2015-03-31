@@ -1,4 +1,4 @@
-package donut
+package client
 
 import (
 	"sort"

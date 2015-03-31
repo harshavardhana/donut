@@ -25,7 +25,6 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/minio-io/cli"
 	"github.com/minio-io/donut/client"
-	"github.com/minio-io/donut/client/donut"
 )
 
 const (
@@ -77,7 +76,7 @@ func doDonutListCmd(c *cli.Context) {
 	for k, v := range donutConfigData.Donuts[urlArg1.Host].Node {
 		nodes[k] = v.ActiveDisks
 	}
-	d, err := donut.GetNewClient(urlArg1.Host, nodes)
+	d, err := client.GetNewClient(urlArg1.Host, nodes)
 	if err != nil {
 		fatal(err.Error())
 	}

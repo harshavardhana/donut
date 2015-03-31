@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-// Client - Minio client interface
+// Client - client interface
 type Client interface {
 	Get(bucket, object string) (body io.ReadCloser, size int64, err error)
 	GetPartial(bucket, key string, offset, length int64) (body io.ReadCloser, size int64, err error)
-	Put(bucket, object string, size int64, body io.ReadCloser) error
+	Put(bucket, object string, size int64, body io.Reader) error
 	Stat(bucket, object string) (size int64, date time.Time, err error)
 	PutBucket(bucket string) error
 	ListBuckets() ([]*Bucket, error)
