@@ -57,6 +57,7 @@ type TLSConfig struct {
 	KeyPEMBlock  []byte
 }
 
+// Maxkeys listed per ListObjects()
 const (
 	Maxkeys = 1000
 )
