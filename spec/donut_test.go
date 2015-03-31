@@ -17,12 +17,16 @@ type MySuite struct{}
 
 var _ = Suite(&MySuite{})
 
-func setupDisks(c *C) []string {
+func setupNodeDiskMap(c *C) map[string][]string {
 	var disks []string
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
-	c.Assert(err, IsNil)
-	disks = append(disks, root)
-	return disks
+	for i := 0; i < 16; i++ {
+		root, err := ioutil.TempDir(os.TempDir(), "donut-")
+		c.Assert(err, IsNil)
+		disks = append(disks, root)
+	}
+	nodeDiskMap := make(map[string][]string)
+	nodeDiskMap["localhost"] = disks
+	return nodeDiskMap
 }
 
 func removeDisks(c *C, disks []string) {
@@ -33,12 +37,9 @@ func removeDisks(c *C, disks []string) {
 }
 
 func (s *MySuite) TestEmptyBucket(c *C) {
-	disks := setupDisks(c)
-	defer removeDisks(c, disks)
-
-	nodeDiskMap := make(map[string][]string)
-	nodeDiskMap["localhost"] = disks
-	donut, err := NewDonut("testemptybucket", nodeDiskMap)
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
 	// check buckets are empty
@@ -47,83 +48,94 @@ func (s *MySuite) TestEmptyBucket(c *C) {
 	c.Assert(len(buckets), Equals, 0)
 }
 
-/*
 func (s *MySuite) TestBucketWithoutNameFails(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	donut, err := NewDonut(root)
-	c.Assert(err, IsNil)
+
 	// fail to create new bucket without a name
-	err = donut.CreateBucket("")
+	err = donut.MakeBucket("")
 	c.Assert(err, Not(IsNil))
 
-	err = donut.CreateBucket(" ")
+	err = donut.MakeBucket(" ")
 	c.Assert(err, Not(IsNil))
 }
 
 func (s *MySuite) TestCreateBucketAndList(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	donut, err := NewDonut(root)
-	c.Assert(err, IsNil)
-	// create bucket
-	err = donut.CreateBucket("foo")
+
+	// make bucket
+	err = donut.MakeBucket("foo")
 	c.Assert(err, IsNil)
 
 	// check bucket exists
 	buckets, err := donut.ListBuckets()
 	c.Assert(err, IsNil)
-	c.Assert(buckets, DeepEquals, []string{"foo"})
+	_, ok := buckets["foo"]
+	c.Assert(ok, Equals, true)
 }
 
 func (s *MySuite) TestCreateBucketWithSameNameFails(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	donut, err := NewDonut(root)
-	c.Assert(err, IsNil)
-	err = donut.CreateBucket("foo")
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
-	err = donut.CreateBucket("foo")
+	// make bucket
+	err = donut.MakeBucket("foo")
+	c.Assert(err, IsNil)
+
+	// make bucket fail
+	err = donut.MakeBucket("foo")
 	c.Assert(err, Not(IsNil))
 }
 
 func (s *MySuite) TestCreateMultipleBucketsAndList(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	donut, err := NewDonut(root)
-	c.Assert(err, IsNil)
-	// add a second bucket
-	err = donut.CreateBucket("foo")
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
-	err = donut.CreateBucket("bar")
+	err = donut.MakeBucket("foo")
+	c.Assert(err, IsNil)
+
+	err = donut.MakeBucket("bar")
 	c.Assert(err, IsNil)
 
 	buckets, err := donut.ListBuckets()
 	c.Assert(err, IsNil)
-	c.Assert(buckets, DeepEquals, []string{"bar", "foo"})
 
-	err = donut.CreateBucket("foobar")
+	createdBuckets := []string{"bar", "foo"}
+	for _, bucketName := range createdBuckets {
+		_, ok := buckets[bucketName]
+		c.Assert(ok, Equals, true)
+	}
+
+	err = donut.MakeBucket("foobar")
 	c.Assert(err, IsNil)
+	createdBuckets = append(createdBuckets, "foobar")
 
 	buckets, err = donut.ListBuckets()
 	c.Assert(err, IsNil)
-	c.Assert(buckets, DeepEquals, []string{"bar", "foo", "foobar"})
+	for _, bucketName := range createdBuckets {
+		_, ok := buckets[bucketName]
+		c.Assert(ok, Equals, true)
+	}
 }
 
+/*
 func (s *MySuite) TestNewObjectFailsWithoutBucket(c *C) {
-	root, err := ioutil.TempDir(os.TempDir(), "donut-")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(root)
-	donut, err := NewDonut(root)
+	nodeDiskMap := setupNodeDiskMap(c)
+	donut, err := NewDonut("testemptydonut", nodeDiskMap)
+	defer removeDisks(c, nodeDiskMap["localhost"])
 	c.Assert(err, IsNil)
 
-	writer, err := donut.GetObjectWriter("foo", "obj")
+	reader, writer := io.Pipe()
+	err := donut.GetObject("foo", "obj")
 	c.Assert(err, Not(IsNil))
 	c.Assert(writer, IsNil)
 }

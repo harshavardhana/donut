@@ -69,6 +69,12 @@ func NewDonut(donutName string, nodeDiskMap map[string][]string) (Donut, error) 
 }
 
 func (d donut) MakeBucket(bucketName string) error {
+	if bucketName == "" || strings.TrimSpace(bucketName) == "" {
+		return errors.New("invalid argument")
+	}
+	if _, ok := d.buckets[bucketName]; ok {
+		return errors.New("bucket exists")
+	}
 	bucket, err := NewBucket(bucketName, d.name, d.nodes)
 	if err != nil {
 		return err
