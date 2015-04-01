@@ -6,13 +6,17 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/mgutz/ansi",
-			"Rev": "22ddafb24adc4786c83841aa3021349818c898e4"
+			"ImportPath": "github.com/cheggaaa/pb",
+			"Rev": "0464652af750701d218b6dd035f0217e407caf2d"
 		},
 		{
 			"ImportPath": "github.com/minio-io/cli",
 			"Comment": "1.2.0-99-g1ee5c11",
 			"Rev": "1ee5c115af7856a16f133e2f2d3d9f91895c2ddb"
+		},
+		{
+			"ImportPath": "github.com/minio-io/minio/pkg/utils/split",
+			"Rev": "936520e6e0fc5dd4ce8d04504ee991084555e57a"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",

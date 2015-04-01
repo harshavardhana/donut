@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"net/url"
@@ -34,8 +35,7 @@ const (
 // printBuckets lists buckets and its meta-dat
 func printBuckets(v []*client.Bucket) {
 	for _, b := range v {
-		msg := fmt.Sprintf("%23s %13s %s", b.CreationDate.Time.Local().Format(printDate), "", b.Name)
-		info(msg)
+		fmt.Printf("%23s %13s %s\n", b.CreationDate.Time.Local().Format(printDate), "", b.Name)
 	}
 }
 
@@ -51,26 +51,25 @@ func printObjects(v []*client.Item) {
 
 // printObject prints object meta-data
 func printObject(date time.Time, v int64, key string) {
-	msg := fmt.Sprintf("%23s %13s %s", date.Local().Format(printDate), pb.FormatBytes(v), key)
-	info(msg)
+	fmt.Printf("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
 }
 
 // doDonutListCmd - list buckets and objects
 func doDonutListCmd(c *cli.Context) {
 	if !c.Args().Present() {
-		fatal("no args?")
+		log.Fatalln("no args?")
 	}
 	urlArg1, err := url.Parse(c.Args().First())
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 	donutConfigData, err := loadDonutConfig()
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 	if _, ok := donutConfigData.Donuts[urlArg1.Host]; !ok {
 		msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
-		fatal(msg)
+		log.Fatalln(msg)
 	}
 	nodes := make(map[string][]string)
 	for k, v := range donutConfigData.Donuts[urlArg1.Host].Node {
@@ -78,24 +77,24 @@ func doDonutListCmd(c *cli.Context) {
 	}
 	d, err := client.GetNewClient(urlArg1.Host, nodes)
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 	bucketName, objectName, err := url2Object(urlArg1.String())
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 
 	switch true {
 	case bucketName == "":
 		buckets, err := d.ListBuckets()
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		printBuckets(buckets)
 	case objectName == "": // List objects in a bucket
 		items, _, err := d.ListObjects(bucketName, "", "", "", client.Maxkeys)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		printObjects(items)
 	}

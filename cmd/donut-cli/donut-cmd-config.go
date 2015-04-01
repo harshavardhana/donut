@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -48,7 +49,7 @@ func getDonutConfigDir() string {
 	u, err := user.Current()
 	if err != nil {
 		msg := fmt.Sprintf("Unable to obtain user's home directory. \nError: %s", err)
-		fatal(msg)
+		log.Fatalln(msg)
 	}
 
 	return path.Join(u.HomeDir, donutConfigDir)

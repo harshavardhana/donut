@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 
@@ -13,24 +13,23 @@ import (
 func upload(urlArg1, urlArg2 *url.URL) {
 	st, stErr := os.Stat(urlArg1.Path)
 	if os.IsNotExist(stErr) {
-		panic(stErr)
+		log.Fatalln(stErr)
 	}
 	if st.IsDir() {
-		panic("is a directory")
+		log.Fatalln("is a directory")
 	}
 	reader, err := os.OpenFile(urlArg1.Path, 2, os.ModeAppend)
 	defer reader.Close()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	if urlArg2.Scheme == "donut" {
 		donutConfigData, err := loadDonutConfig()
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err.Error())
 		}
 		if _, ok := donutConfigData.Donuts[urlArg2.Host]; !ok {
-			msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg2.Host)
-			fatal(msg)
+			log.Fatalf("requested donut: <%s> does not exist\n", urlArg2.Host)
 		}
 		nodes := make(map[string][]string)
 		for k, v := range donutConfigData.Donuts[urlArg2.Host].Node {
@@ -38,14 +37,14 @@ func upload(urlArg1, urlArg2 *url.URL) {
 		}
 		d, err := client.GetNewClient(urlArg2.Host, nodes)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		bucketName, objectName, err := url2Object(urlArg2.String())
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		if err := d.Put(bucketName, objectName, st.Size(), reader); err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 	}
 }
@@ -54,16 +53,15 @@ func download(urlArg1, urlArg2 *url.URL) {
 	writer, err := os.Create(urlArg2.Path)
 	defer writer.Close()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 	if urlArg1.Scheme == "donut" {
 		donutConfigData, err := loadDonutConfig()
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		if _, ok := donutConfigData.Donuts[urlArg1.Host]; !ok {
-			msg := fmt.Sprintf("requested donut: <%s> does not exist", urlArg1.Host)
-			fatal(msg)
+			log.Fatalf("requested donut: <%s> does not exist\n", urlArg1.Host)
 		}
 		nodes := make(map[string][]string)
 		for k, v := range donutConfigData.Donuts[urlArg1.Host].Node {
@@ -71,19 +69,19 @@ func download(urlArg1, urlArg2 *url.URL) {
 		}
 		d, err := client.GetNewClient(urlArg1.Host, nodes)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		bucketName, objectName, err := url2Object(urlArg1.String())
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		reader, size, err := d.Get(bucketName, objectName)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		_, err = io.CopyN(writer, reader, size)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		reader.Close()
 	}
@@ -91,17 +89,17 @@ func download(urlArg1, urlArg2 *url.URL) {
 
 func doDonutCPCmd(c *cli.Context) {
 	if !c.Args().Present() {
-		fatal("no args?")
+		log.Fatalln("no args?")
 	}
 	switch len(c.Args()) {
 	case 2:
 		urlArg1, errArg1 := url.Parse(c.Args().Get(0))
 		if errArg1 != nil {
-			fatal(errArg1.Error())
+			log.Fatalln(errArg1)
 		}
 		urlArg2, errArg2 := url.Parse(c.Args().Get(1))
 		if errArg2 != nil {
-			fatal(errArg2.Error())
+			log.Fatalln(errArg2)
 		}
 		switch true {
 		case urlArg1.Scheme != "" && urlArg2.Scheme == "":

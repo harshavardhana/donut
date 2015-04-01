@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/minio-io/cli"
@@ -39,27 +40,27 @@ func newDonutConfig(donutName string) (*mcDonutConfig, error) {
 // doMakeDonutCmd creates a new donut
 func doMakeDonutCmd(c *cli.Context) {
 	if !c.Args().Present() {
-		fatal("no args?")
+		log.Fatalln("no args?")
 	}
 	if len(c.Args()) != 1 {
-		fatal("invalid number of args")
+		log.Fatalln("invalid number of args")
 	}
 	donutName := c.Args().First()
 	if !isValidDonutName(donutName) {
-		fatal("Invalid donutName")
+		log.Fatalln("Invalid donutName")
 	}
 	mcDonutConfigData, err := loadDonutConfig()
 	if os.IsNotExist(err) {
 		mcDonutConfigData, err = newDonutConfig(donutName)
 		if err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		if err := saveDonutConfig(mcDonutConfigData); err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 		return
 	} else if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 	if _, ok := mcDonutConfigData.Donuts[donutName]; !ok {
 		mcDonutConfigData.Donuts[donutName] = donutConfig{
@@ -70,10 +71,10 @@ func doMakeDonutCmd(c *cli.Context) {
 			InactiveDisks: make([]string, 0),
 		}
 		if err := saveDonutConfig(mcDonutConfigData); err != nil {
-			fatal(err.Error())
+			log.Fatalln(err)
 		}
 	} else {
 		msg := fmt.Sprintf("donut: %s already exists", donutName)
-		info(msg)
+		log.Println(msg)
 	}
 }

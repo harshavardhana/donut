@@ -17,31 +17,29 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/minio-io/cli"
 )
 
 func doAttachDiskCmd(c *cli.Context) {
 	if !c.Args().Present() {
-		fatal("no args?")
+		log.Fatalln("no args?")
 	}
 	disks := c.Args()
 	mcDonutConfigData, err := loadDonutConfig()
 	if err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 	donutName := c.String("name")
 	if donutName == "" {
-		fatal("Invalid --donut <name> is needed for attach")
+		log.Fatalln("Invalid --donut <name> is needed for attach")
 	}
 	if _, ok := mcDonutConfigData.Donuts[donutName]; !ok {
-		msg := fmt.Sprintf("Requested donut name %s does not exist, please use ``mc donut make`` first", donutName)
-		fatal(msg)
+		log.Fatalf("Requested donut name %s does not exist, please use ``mc donut make`` first\n", donutName)
 	}
 	if _, ok := mcDonutConfigData.Donuts[donutName].Node["localhost"]; !ok {
-		msg := fmt.Sprintf("Corrupted donut config, please consult donut experts")
-		fatal(msg)
+		log.Fatalln("Corrupted donut config, please consult donut experts")
 	}
 	activeDisks := mcDonutConfigData.Donuts[donutName].Node["localhost"].ActiveDisks
 	inactiveDisks := mcDonutConfigData.Donuts[donutName].Node["localhost"].InactiveDisks
@@ -55,6 +53,6 @@ func doAttachDiskCmd(c *cli.Context) {
 		InactiveDisks: inactiveDisks,
 	}
 	if err := saveDonutConfig(mcDonutConfigData); err != nil {
-		fatal(err.Error())
+		log.Fatalln(err)
 	}
 }
