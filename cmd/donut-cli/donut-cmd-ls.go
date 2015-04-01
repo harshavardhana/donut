@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"net/url"
@@ -52,6 +53,33 @@ func printObjects(v []*client.Item) {
 // printObject prints object meta-data
 func printObject(date time.Time, v int64, key string) {
 	fmt.Printf("%23s %13s %s\n", date.Local().Format(printDate), pb.FormatBytes(v), key)
+}
+
+// listObjectPrefix prints matching key prefix
+func listObjectPrefix(d client.Client, bucketName, objectName string, maxkeys int) {
+	var date time.Time
+	var size int64
+	var err error
+
+	size, date, err = d.Stat(bucketName, objectName)
+	var items []*client.Item
+	switch err {
+	case nil: // List a single object. Exact key
+		printObject(date, size, objectName)
+	case os.ErrNotExist:
+		// List all objects matching the key prefix
+		items, _, err = d.ListObjects(bucketName, "", objectName, "", maxkeys)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if len(items) > 0 {
+			printObjects(items)
+		} else {
+			log.Fatalln(os.ErrNotExist)
+		}
+	default: // Error
+		log.Fatalln(err)
+	}
 }
 
 // doDonutListCmd - list buckets and objects
@@ -97,5 +125,7 @@ func doDonutListCmd(c *cli.Context) {
 			log.Fatalln(err)
 		}
 		printObjects(items)
+	case objectName != "":
+		listObjectPrefix(d, bucketName, objectName, client.Maxkeys)
 	}
 }
