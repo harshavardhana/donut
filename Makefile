@@ -40,6 +40,7 @@ pre-build:
 
 build-all: getdeps verifiers
 	@echo "Building Libraries:"
+	@godep go generate github.com/minio-io/erasure
 	@godep go generate ./...
 	@godep go build ./...
 

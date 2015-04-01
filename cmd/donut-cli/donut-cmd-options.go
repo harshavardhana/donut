@@ -67,36 +67,12 @@ var rebalanceDonutCmd = cli.Command{
 	Action:      doRebalanceDonutCmd,
 }
 
-var mbDonutCmd = cli.Command{
-	Name:        "mb",
-	Usage:       "make bucket",
-	Description: "Make a new bucket",
-	Action:      doMakeDonutBucketCmd,
-}
-
-var lsDonutCmd = cli.Command{
-	Name:        "ls",
-	Usage:       "get list of objects",
-	Description: `List Objects and common prefixes under a prefix or all Buckets`,
-	Action:      doDonutListCmd,
-}
-
-var cpDonutCmd = cli.Command{
-	Name:        "cp",
-	Usage:       "",
-	Description: "",
-	Action:      doDonutCPCmd,
-}
-
 var donutOptions = []cli.Command{
 	makeDonutCmd,
 	attachDiskCmd,
 	detachDiskCmd,
 	healDonutCmd,
 	rebalanceDonutCmd,
-	mbDonutCmd,
-	lsDonutCmd,
-	cpDonutCmd,
 }
 
 func doHealDonutCmd(c *cli.Context) {
