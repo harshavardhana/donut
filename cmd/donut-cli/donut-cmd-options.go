@@ -74,6 +74,13 @@ var rebalanceDonutCmd = cli.Command{
 	Action:      doRebalanceDonutCmd,
 }
 
+var infoDonutCmd = cli.Command{
+	Name:        "info",
+	Usage:       "information about donut",
+	Description: "Pretty print donut information",
+	Action:      doInfoDonutCmd,
+}
+
 var donutOptions = []cli.Command{
 	makeDonutCmd,
 	listDonutCmd,
@@ -81,6 +88,7 @@ var donutOptions = []cli.Command{
 	detachDiskCmd,
 	healDonutCmd,
 	rebalanceDonutCmd,
+	infoDonutCmd,
 }
 
 func doHealDonutCmd(c *cli.Context) {
