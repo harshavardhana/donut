@@ -27,6 +27,13 @@ var makeDonutCmd = cli.Command{
 	Action:      doMakeDonutCmd,
 }
 
+var listDonutCmd = cli.Command{
+	Name:        "list",
+	Usage:       "list donuts",
+	Description: "list all donuts locally or remote",
+	Action:      doListDonutCmd,
+}
+
 var attachDiskCmd = cli.Command{
 	Name:        "attach",
 	Usage:       "attach disk",
@@ -69,6 +76,7 @@ var rebalanceDonutCmd = cli.Command{
 
 var donutOptions = []cli.Command{
 	makeDonutCmd,
+	listDonutCmd,
 	attachDiskCmd,
 	detachDiskCmd,
 	healDonutCmd,
