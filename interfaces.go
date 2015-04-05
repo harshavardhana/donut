@@ -80,8 +80,8 @@ type Node interface {
 	DetachDisk(disk Disk) error
 
 	GetNodeName() string
-	SaveConfig() ([]byte, error)
-	LoadConfig([]byte) error
+	SaveConfig() error
+	LoadConfig() error
 }
 
 // Disk interface
@@ -97,8 +97,6 @@ type Disk interface {
 	GetPath() string
 	GetOrder() int
 	GetFSInfo() map[string]string
-	SaveConfig() ([]byte, error)
-	LoadConfig([]byte) error
 }
 
 const (
