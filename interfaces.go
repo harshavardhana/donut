@@ -25,9 +25,18 @@ import (
 
 // Donut interface
 type Donut interface {
+	Storage
+	Management
+}
+
+// Storage object storage interface
+type Storage interface {
 	MakeBucket(bucket string) error
 	ListBuckets() (map[string]Bucket, error)
+}
 
+// Management is a donut management system interface
+type Management interface {
 	Heal() error
 	Rebalance() error
 	Info() (map[string][]string, error)
