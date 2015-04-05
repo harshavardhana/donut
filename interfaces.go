@@ -44,8 +44,8 @@ type Management interface {
 	AttachNode(node Node) error
 	DetachNode(node Node) error
 
-	SaveConfig() ([]byte, error)
-	LoadConfig([]byte) error
+	SaveConfig() error
+	LoadConfig() error
 }
 
 // Encoder interface
@@ -57,8 +57,6 @@ type Encoder interface {
 
 // Bucket interface
 type Bucket interface {
-	GetBucketName() string
-
 	ListNodes() (map[string]Node, error)
 	ListObjects() (map[string]Object, error)
 
@@ -71,7 +69,6 @@ type Bucket interface {
 
 // Object interface
 type Object interface {
-	GetObjectName() string
 	GetObjectMetadata() (map[string]string, error)
 	GetDonutObjectMetadata() (map[string]string, error)
 }
@@ -103,3 +100,9 @@ type Disk interface {
 	SaveConfig() ([]byte, error)
 	LoadConfig([]byte) error
 }
+
+const (
+	donutObjectMetadataConfig = "donutObjectMetadata.json"
+	objectMetadataConfig      = "objectMetadata.json"
+	donutConfig               = "donutMetadata.json"
+)
