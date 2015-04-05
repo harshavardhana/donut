@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -92,7 +93,7 @@ func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, 
 	// check if object exists
 	object, ok := objects[objectName]
 	if !ok {
-		return nil, 0, errors.New("object does not exist")
+		return nil, 0, os.ErrNotExist
 	}
 	donutObjectMetadata, err := object.GetDonutObjectMetadata()
 	if err != nil {
