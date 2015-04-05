@@ -61,7 +61,7 @@ type Bucket interface {
 	ListObjects() (map[string]Object, error)
 
 	GetObject(object string) (io.ReadCloser, int64, error)
-	PutObject(object string, contents io.Reader) error
+	PutObject(object, contentType string, contents io.Reader) error
 
 	WriteDonutObjectMetadata(object string, donutMetadata map[string]string) error
 	WriteObjectMetadata(object string, objectMetadata map[string]string) error
