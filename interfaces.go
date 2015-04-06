@@ -25,14 +25,25 @@ import (
 
 // Donut interface
 type Donut interface {
-	Storage
+	ObjectStorage
 	Management
 }
 
 // Storage object storage interface
-type Storage interface {
+type ObjectStorage interface {
+	// Storage Operations
+	GetBucketMetadata(bucket string) (map[string]string, error)
+	SetBucketMetadata(bucket string, metadata map[string]string) error
+	ListBuckets() ([]string, error)
 	MakeBucket(bucket string) error
-	ListBuckets() (map[string]Bucket, error)
+
+	// Bucket Operations
+	ListObjects(bucket, prefix, marker, delim string, maxKeys int) (result []string, isTruncated bool, err error)
+
+	// Object Operations
+	GetObject(bucket, object string) (io.ReadCloser, error)
+	GetObjectMetadata(bucket, object string) (map[string]string, error)
+	PutObject(bucket, object string, reader io.ReadCloser, metadata map[string]string) error
 }
 
 // Management is a donut management system interface
