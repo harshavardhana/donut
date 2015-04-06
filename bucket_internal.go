@@ -22,9 +22,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"path"
 	"strconv"
+
+	"github.com/minio-io/minio/pkg/utils/split"
 )
 
 func (b bucket) getDataAndParity(totalWriters int) (k uint8, m uint8, err error) {
@@ -42,7 +45,32 @@ func (b bucket) getDataAndParity(totalWriters int) (k uint8, m uint8, err error)
 	return k, m, nil
 }
 
-func (b bucket) getObject(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
+func (b bucket) writeEncodedData(k, m uint8, writers []io.WriteCloser, objectData io.Reader, summer hash.Hash) (int, int, error) {
+	chunks := split.Stream(objectData, 10*1024*1024)
+	encoder, err := NewEncoder(k, m, "Cauchy")
+	if err != nil {
+		return 0, 0, err
+	}
+	chunkCount := 0
+	totalLength := 0
+	for chunk := range chunks {
+		if chunk.Err == nil {
+			totalLength = totalLength + len(chunk.Data)
+			encodedBlocks, _ := encoder.Encode(chunk.Data)
+			summer.Write(chunk.Data)
+			for blockIndex, block := range encodedBlocks {
+				_, err := io.Copy(writers[blockIndex], bytes.NewBuffer(block))
+				if err != nil {
+					return 0, 0, err
+				}
+			}
+		}
+		chunkCount = chunkCount + 1
+	}
+	return chunkCount, totalLength, nil
+}
+
+func (b bucket) readEncodedData(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
 	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
 	if err != nil {
 		writer.CloseWithError(err)
