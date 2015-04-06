@@ -17,7 +17,6 @@
 package donut
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -30,8 +29,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-
-	"github.com/minio-io/minio/pkg/utils/split"
 )
 
 type bucket struct {
@@ -116,7 +113,7 @@ func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, 
 	if err != nil {
 		return nil, 0, err
 	}
-	go b.getObject(b.normalizeObjectName(objectName), writer, donutObjectMetadata)
+	go b.readEncodedData(b.normalizeObjectName(objectName), writer, donutObjectMetadata)
 	return reader, size, nil
 }
 
@@ -165,12 +162,8 @@ func (b bucket) normalizeObjectName(objectName string) string {
 	// replace every '/' with '-'
 	return strings.Replace(objectName, "/", "-", -1)
 }
-
 func (b bucket) PutObject(objectName, contentType string, objectData io.Reader) error {
-	if objectName == "" {
-		return errors.New("invalid argument")
-	}
-	if objectData == nil {
+	if objectName == "" || objectData == nil {
 		return errors.New("invalid argument")
 	}
 	if contentType == "" || strings.TrimSpace(contentType) == "" {
@@ -198,23 +191,9 @@ func (b bucket) PutObject(objectName, contentType string, objectData io.Reader) 
 		if err != nil {
 			return err
 		}
-		chunks := split.Stream(objectData, 10*1024*1024)
-		encoder, err := NewEncoder(k, m, "Cauchy")
+		chunkCount, totalLength, err := b.writeEncodedData(k, m, writers, objectData, summer)
 		if err != nil {
 			return err
-		}
-		chunkCount := 0
-		totalLength := 0
-		for chunk := range chunks {
-			if chunk.Err == nil {
-				totalLength = totalLength + len(chunk.Data)
-				encodedBlocks, _ := encoder.Encode(chunk.Data)
-				summer.Write(chunk.Data)
-				for blockIndex, block := range encodedBlocks {
-					io.Copy(writers[blockIndex], bytes.NewBuffer(block))
-				}
-			}
-			chunkCount = chunkCount + 1
 		}
 		donutObjectMetadata["blockSize"] = strconv.Itoa(10 * 1024 * 1024)
 		donutObjectMetadata["chunkCount"] = strconv.Itoa(chunkCount)
