@@ -20,15 +20,43 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/minio-io/minio/pkg/utils/split"
 )
+
+func (b bucket) writeDonutObjectMetadata(objectName string, objectMetadata map[string]string) error {
+	if len(objectMetadata) == 0 {
+		return errors.New("invalid argument")
+	}
+	objectMetadataWriters, err := b.getDiskWriters(objectName, objectMetadataConfig)
+	if err != nil {
+		return err
+	}
+	for _, objectMetadataWriter := range objectMetadataWriters {
+		defer objectMetadataWriter.Close()
+	}
+	for _, objectMetadataWriter := range objectMetadataWriters {
+		jenc := json.NewEncoder(objectMetadataWriter)
+		if err := jenc.Encode(objectMetadata); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// This a temporary normalization of object path, need to find a better way
+func (b bucket) normalizeObjectName(objectName string) string {
+	// replace every '/' with '-'
+	return strings.Replace(objectName, "/", "-", -1)
+}
 
 func (b bucket) getDataAndParity(totalWriters int) (k uint8, m uint8, err error) {
 	if totalWriters <= 1 {
@@ -70,8 +98,8 @@ func (b bucket) writeEncodedData(k, m uint8, writers []io.WriteCloser, objectDat
 	return chunkCount, totalLength, nil
 }
 
-func (b bucket) readEncodedData(objectName string, writer *io.PipeWriter, donutObjectMetadata map[string]string) {
-	expectedMd5sum, err := hex.DecodeString(donutObjectMetadata["md5"])
+func (b bucket) readEncodedData(objectName string, writer *io.PipeWriter, objectMetadata map[string]string) {
+	expectedMd5sum, err := hex.DecodeString(objectMetadata["md5"])
 	if err != nil {
 		writer.CloseWithError(err)
 		return
@@ -85,12 +113,12 @@ func (b bucket) readEncodedData(objectName string, writer *io.PipeWriter, donutO
 	mwriter := io.MultiWriter(writer, hasher)
 	switch len(readers) == 1 {
 	case false:
-		totalChunks, totalLeft, blockSize, k, m, err := b.metadata2Values(donutObjectMetadata)
+		totalChunks, totalLeft, blockSize, k, m, err := b.metadata2Values(objectMetadata)
 		if err != nil {
 			writer.CloseWithError(err)
 			return
 		}
-		technique, ok := donutObjectMetadata["erasureTechnique"]
+		technique, ok := objectMetadata["erasureTechnique"]
 		if !ok {
 			writer.CloseWithError(errors.New("missing erasure Technique"))
 			return
@@ -156,12 +184,12 @@ func (b bucket) decodeData(totalLeft, blockSize int64, readers []io.ReadCloser, 
 	return decodedData, nil
 }
 
-func (b bucket) metadata2Values(donutObjectMetadata map[string]string) (totalChunks int, totalLeft, blockSize int64, k, m uint64, err error) {
-	totalChunks, err = strconv.Atoi(donutObjectMetadata["chunkCount"])
-	totalLeft, err = strconv.ParseInt(donutObjectMetadata["size"], 10, 64)
-	blockSize, err = strconv.ParseInt(donutObjectMetadata["blockSize"], 10, 64)
-	k, err = strconv.ParseUint(donutObjectMetadata["erasureK"], 10, 8)
-	m, err = strconv.ParseUint(donutObjectMetadata["erasureM"], 10, 8)
+func (b bucket) metadata2Values(objectMetadata map[string]string) (totalChunks int, totalLeft, blockSize int64, k, m uint64, err error) {
+	totalChunks, err = strconv.Atoi(objectMetadata["chunkCount"])
+	totalLeft, err = strconv.ParseInt(objectMetadata["size"], 10, 64)
+	blockSize, err = strconv.ParseInt(objectMetadata["blockSize"], 10, 64)
+	k, err = strconv.ParseUint(objectMetadata["erasureK"], 10, 8)
+	m, err = strconv.ParseUint(objectMetadata["erasureM"], 10, 8)
 	return
 }
 
