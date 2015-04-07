@@ -211,12 +211,12 @@ func (s *MySuite) TestMultipleNewObjects(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(readerBuffer2.Bytes(), DeepEquals, []byte("two"))
 	// test list objects
-	listObjects, isTruncated, err := donut.ListObjects("foo", "o", "", "", 1)
+	listObjects, _, isTruncated, err := donut.ListObjects("foo", "o", "", "", 1)
 	c.Assert(err, IsNil)
 	c.Assert(isTruncated, Equals, true)
 	c.Assert(listObjects, DeepEquals, []string{"obj1"})
 
-	listObjects, isTruncated, err = donut.ListObjects("foo", "o", "", "", 10)
+	listObjects, _, isTruncated, err = donut.ListObjects("foo", "o", "", "", 10)
 	c.Assert(err, IsNil)
 	c.Assert(isTruncated, Equals, false)
 	c.Assert(listObjects, DeepEquals, []string{"obj1", "obj2"})
