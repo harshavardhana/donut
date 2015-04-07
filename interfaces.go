@@ -29,9 +29,9 @@ type Donut interface {
 	Management
 }
 
-// Storage object storage interface
+// ObjectStorage interface
 type ObjectStorage interface {
-	// Storage Operations
+	// Storage service Operations
 	GetBucketMetadata(bucket string) (map[string]string, error)
 	SetBucketMetadata(bucket string, metadata map[string]string) error
 	ListBuckets() ([]string, error)
@@ -41,7 +41,7 @@ type ObjectStorage interface {
 	ListObjects(bucket, prefix, marker, delim string, maxKeys int) (result []string, isTruncated bool, err error)
 
 	// Object Operations
-	GetObject(bucket, object string) (io.ReadCloser, error)
+	GetObject(bucket, object string) (io.ReadCloser, int64, error)
 	GetObjectMetadata(bucket, object string) (map[string]string, error)
 	PutObject(bucket, object string, reader io.ReadCloser, metadata map[string]string) error
 }
@@ -68,19 +68,14 @@ type Encoder interface {
 
 // Bucket interface
 type Bucket interface {
-	ListNodes() (map[string]Node, error)
 	ListObjects() (map[string]Object, error)
 
 	GetObject(object string) (io.ReadCloser, int64, error)
-	PutObject(object, contentType string, contents io.Reader) error
-
-	WriteDonutObjectMetadata(object string, donutMetadata map[string]string) error
-	WriteObjectMetadata(object string, objectMetadata map[string]string) error
+	PutObject(object string, contents io.Reader, metadata map[string]string) error
 }
 
 // Object interface
 type Object interface {
-	GetObjectMetadata() (map[string]string, error)
 	GetDonutObjectMetadata() (map[string]string, error)
 }
 
@@ -111,7 +106,6 @@ type Disk interface {
 }
 
 const (
-	donutObjectMetadataConfig = "donutObjectMetadata.json"
-	objectMetadataConfig      = "objectMetadata.json"
-	donutConfig               = "donutMetadata.json"
+	objectMetadataConfig = "objectMetadata.json"
+	donutConfig          = "donutMetadata.json"
 )
