@@ -138,5 +138,5 @@ func (d donut) GetObjectMetadata(bucket, object string) (map[string]string, erro
 	if !ok {
 		return nil, iodine.New(errors.New("object does not exist"), errParams)
 	}
-	return objectStruct.GetDonutObjectMetadata()
+	return objectStruct.GetObjectMetadata()
 }

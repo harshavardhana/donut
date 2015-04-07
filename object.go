@@ -41,7 +41,7 @@ func NewObject(objectName, p string) (Object, error) {
 	return o, nil
 }
 
-func (o object) GetDonutObjectMetadata() (map[string]string, error) {
+func (o object) GetObjectMetadata() (map[string]string, error) {
 	objectMetadata := make(map[string]string)
 	objectMetadataBytes, err := ioutil.ReadFile(path.Join(o.objectPath, objectMetadataConfig))
 	if err != nil {
