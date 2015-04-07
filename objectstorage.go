@@ -28,7 +28,7 @@ func (d donut) GetBucketMetadata(bucket string) (map[string]string, error) {
 	}
 	metadata := make(map[string]string)
 	metadata["name"] = bucket
-	metadata["created"] = time.Now().String() // TODO get this, from whatever is written from SetBucketMetadata
+	metadata["created"] = time.Now().Format(time.RFC3339Nano) // TODO get this, from whatever is written from SetBucketMetadata
 	return metadata, nil
 }
 
