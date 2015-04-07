@@ -76,7 +76,7 @@ type Bucket interface {
 
 // Object interface
 type Object interface {
-	GetDonutObjectMetadata() (map[string]string, error)
+	GetObjectMetadata() (map[string]string, error)
 }
 
 // Node interface

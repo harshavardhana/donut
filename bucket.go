@@ -69,11 +69,11 @@ func (b bucket) ListObjects() (map[string]Object, error) {
 				if err != nil {
 					return nil, err
 				}
-				newDonutObjectMetadata, err := newObject.GetDonutObjectMetadata()
+				newObjectMetadata, err := newObject.GetObjectMetadata()
 				if err != nil {
 					return nil, err
 				}
-				objectName, ok := newDonutObjectMetadata["object"]
+				objectName, ok := newObjectMetadata["object"]
 				if !ok {
 					return nil, errors.New("object corrupted")
 				}
@@ -97,7 +97,7 @@ func (b bucket) GetObject(objectName string) (reader io.ReadCloser, size int64, 
 	if !ok {
 		return nil, 0, os.ErrNotExist
 	}
-	objectMetata, err := object.GetDonutObjectMetadata()
+	objectMetata, err := object.GetObjectMetadata()
 	if err != nil {
 		return nil, 0, err
 	}
