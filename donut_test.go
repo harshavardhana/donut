@@ -128,6 +128,38 @@ func (s *MySuite) TestNewObjectFailsWithoutBucket(c *C) {
 	c.Assert(err, Not(IsNil))
 }
 
+func (s *MySuite) TestNewObjectMetadata(c *C) {
+	root, err := ioutil.TempDir(os.TempDir(), "donut-")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(root)
+	donut, err := NewDonut("test", createTestNodeDiskMap(root))
+	c.Assert(err, IsNil)
+
+	metadata := make(map[string]string)
+	metadata["contentType"] = "application/json"
+	metadata["foo"] = "value1"
+	metadata["hello"] = "world"
+
+	data := "Hello World"
+	hasher := md5.New()
+	hasher.Write([]byte(data))
+	expectedMd5Sum := hex.EncodeToString(hasher.Sum(nil))
+	reader := ioutil.NopCloser(bytes.NewReader([]byte(data)))
+
+	err = donut.MakeBucket("foo")
+	c.Assert(err, IsNil)
+
+	err = donut.PutObject("foo", "obj", expectedMd5Sum, reader, metadata)
+	c.Assert(err, IsNil)
+
+	objectMetadata, err := donut.GetObjectMetadata("foo", "obj")
+	c.Assert(err, IsNil)
+
+	c.Assert(objectMetadata["contentType"], Equals, metadata["contentType"])
+	c.Assert(objectMetadata["foo"], Equals, metadata["foo"])
+	c.Assert(objectMetadata["hello"], Equals, metadata["hello"])
+}
+
 func (s *MySuite) TestNewObjectFailsWithEmptyName(c *C) {
 	root, err := ioutil.TempDir(os.TempDir(), "donut-")
 	c.Assert(err, IsNil)
