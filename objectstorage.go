@@ -37,8 +37,8 @@ func (d donut) ListBuckets() (results []string, err error) {
 	return results, nil
 }
 
-func (d donut) ListObjects(bucket, prefix, marker, delimiter string, maxkeys int) ([]string, bool, error) {
-	// Marker and Delimiter are not yet handled please handle it
+func (d donut) ListObjects(bucket, prefix, marker, delimiter string, maxkeys int) ([]string, []string, bool, error) {
+	// TODO: Marker is not yet handled please handle it
 	errParams := map[string]string{
 		"bucket":    bucket,
 		"prefix":    prefix,
@@ -48,28 +48,48 @@ func (d donut) ListObjects(bucket, prefix, marker, delimiter string, maxkeys int
 	}
 	err := d.getAllBuckets()
 	if err != nil {
-		return nil, false, iodine.New(err, errParams)
+		return nil, nil, false, iodine.New(err, errParams)
 	}
 	if _, ok := d.buckets[bucket]; !ok {
-		return nil, false, iodine.New(errors.New("bucket does not exist"), errParams)
+		return nil, nil, false, iodine.New(errors.New("bucket does not exist"), errParams)
 	}
 	objectList, err := d.buckets[bucket].ListObjects()
 	if err != nil {
-		return nil, false, iodine.New(err, errParams)
+		return nil, nil, false, iodine.New(err, errParams)
+	}
+	var donutObjects []string
+	for objectName := range objectList {
+		donutObjects = append(donutObjects, objectName)
+	}
+	if maxkeys <= 0 {
+		maxkeys = 1000
+	}
+	if strings.TrimSpace(prefix) != "" {
+		donutObjects = filterPrefix(donutObjects, prefix)
+		donutObjects = removePrefix(donutObjects, prefix)
+	}
+
+	var actualObjects []string
+	var commonPrefixes []string
+	var isTruncated bool
+	if strings.TrimSpace(delimiter) != "" {
+		actualObjects = filterDelimited(donutObjects, delimiter)
+		commonPrefixes = filterNotDelimited(donutObjects, delimiter)
+		commonPrefixes = extractDir(commonPrefixes, delimiter)
+		commonPrefixes = uniqueObjects(commonPrefixes)
+	} else {
+		actualObjects = donutObjects
 	}
 	var results []string
-	var isTruncated bool
-	for objectName := range objectList {
+	for _, objectName := range actualObjects {
 		if len(results) >= maxkeys {
 			isTruncated = true
 			break
 		}
-		if strings.HasPrefix(objectName, prefix) {
-			results = append(results, objectName)
-		}
+		results = append(results, prefix+objectName)
 	}
 	sort.Strings(results)
-	return results, isTruncated, nil
+	return results, commonPrefixes, isTruncated, nil
 }
 
 func (d donut) PutObject(bucket, object string, reader io.ReadCloser, metadata map[string]string) error {

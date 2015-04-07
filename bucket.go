@@ -117,7 +117,7 @@ func (b bucket) PutObject(objectName string, objectData io.Reader, metadata map[
 		return errors.New("invalid argument")
 	}
 	contentType, ok := metadata["contentType"]
-	if !ok {
+	if !ok || strings.TrimSpace(contentType) == "" {
 		contentType = "application/octet-stream"
 	}
 	writers, err := b.getDiskWriters(b.normalizeObjectName(objectName), "data")
